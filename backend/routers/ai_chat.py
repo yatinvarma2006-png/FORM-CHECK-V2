@@ -1,50 +1,27 @@
-"""AI Chat endpoint powered by Google Gemini 2.0 Flash.
+"""AI Chat endpoint powered by Google Gemini with rich biomechanics context.
 
 Provides a conversational biomechanics coach that has full context of the
 user's analysis results (metrics, faults, cues, drills) and can answer
-any follow-up question about deadlift or bowling form, injury prevention,
-training programming, mobility work, etc.
+ANY question about deadlift or bowling form, technique, lat engagement, grip,
+belt usage, sumo vs conventional, programming, mobility, injury prevention, etc.
 """
 
 from __future__ import annotations
 
 import os
 from typing import Any, List, Optional
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
-# ── Gemini client (lazy init) ──────────────────────────────────────────────
-
-_model = None
-
-
-def _get_model():
-    global _model
-    if _model is not None:
-        return _model
-
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    if not api_key:
-        raise HTTPException(
-            status_code=500,
-            detail="GEMINI_API_KEY environment variable is not set. "
-                   "Get a free key at https://aistudio.google.com/apikey",
-        )
-
-    try:
-        from google import genai
-
-        client = genai.Client(api_key=api_key)
-        _model = client
-        return _model
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to initialize Gemini: {e}")
-
-
-# ── Request / Response schemas ─────────────────────────────────────────────
+# ── Schemas ────────────────────────────────────────────────────────────────
 
 class ChatMessage(BaseModel):
     role: str  # "user" or "ai"
@@ -63,7 +40,7 @@ class AIChatResponse(BaseModel):
     reply: str
 
 
-# ── System prompt builder ──────────────────────────────────────────────────
+# ── System Prompt Builder ──────────────────────────────────────────────────
 
 def _build_system_prompt(
     sport: str | None,
@@ -71,116 +48,88 @@ def _build_system_prompt(
     ai_report: dict | None,
 ) -> str:
     base = (
-        "You are FormCheck AI Coach, an expert sports biomechanics coach specializing in "
-        "injury prevention and movement optimization. You have deep knowledge of:\n"
-        "- Conventional deadlift mechanics, powerlifting technique, and posterior chain training\n"
-        "- Cricket fast bowling biomechanics, action legality, and pace bowling injury prevention\n"
-        "- General strength & conditioning, mobility, and corrective exercise programming\n\n"
-        "IMPORTANT RULES:\n"
-        "- Give specific, actionable advice — not vague generalities\n"
-        "- Reference the user's actual analysis data when available\n"
-        "- If the user asks about something outside deadlift/bowling biomechanics, "
-        "  answer helpfully but steer back to their training context\n"
-        "- Keep responses concise (2-4 paragraphs max) unless the user asks for detail\n"
-        "- Use plain language, but include anatomical terms where helpful\n"
-        "- Never diagnose injuries — recommend seeing a physiotherapist for pain\n"
+        "You are FormCheck AI Coach, an elite sports biomechanics specialist and powerlifting coach.\n"
+        "Provide thorough, direct, highly actionable answers to any question about deadlift or bowling mechanics, "
+        "lat engagement, setup cues, stance variations, grip, belt usage, programming, or injury prevention.\n"
+        "Be punchy, clear, and complete every sentence without leaving trailing bullets or truncated text.\n"
+        "Use bold headers and bullet points.\n"
     )
 
     if sport:
-        base += f"\nThe user is currently analyzing their {sport} form.\n"
+        base += f"\nCurrent Sport Context: {sport.upper()}\n"
 
     if metrics:
-        base += "\n--- USER'S CURRENT ANALYSIS RESULTS ---\n"
+        base += "\n--- ATHLETE'S LIVE VIDEO METRICS ---\n"
         for m in metrics:
             status = "⚠️ FLAGGED" if m.get("flagged") else "✅ OK"
             base += (
                 f"• {m.get('display_name', m.get('metric_name'))}: "
                 f"{m.get('value')} {m.get('unit', '')} "
-                f"(range: {m.get('min')}-{m.get('max')}) [{status}]"
+                f"(range: {m.get('min')}-{m.get('max')}) [{status}]\n"
             )
-            if m.get("fault_name"):
-                base += f" — Fault: {m['fault_name']}"
-            if m.get("fix_tip"):
-                base += f" — Tip: {m['fix_tip']}"
-            base += "\n"
 
     if ai_report:
         base += f"\n--- AI COACHING SUMMARY ---\n"
-        base += f"AI Form Efficiency Score: {ai_report.get('ai_score', '?')}/100\n"
+        base += f"Form Efficiency Score: {ai_report.get('ai_score', '?')}/100\n"
         base += f"Risk Level: {ai_report.get('risk_level', '?')}\n"
-        base += f"Summary: {ai_report.get('summary', '')}\n"
-        if ai_report.get("cues"):
-            base += "Movement Cues: " + "; ".join(ai_report["cues"]) + "\n"
-        if ai_report.get("recommended_drills"):
-            drills = [d["name"] for d in ai_report["recommended_drills"]]
-            base += "Recommended Drills: " + ", ".join(drills) + "\n"
+        base += f"Overview: {ai_report.get('summary', '')}\n"
 
     return base
 
 
-# ── Chat endpoint ──────────────────────────────────────────────────────────
+# ── Comprehensive Offline Knowledge Base ────────────────────────────────────
 
-def _generate_fallback_response(
-    req: AIChatRequest,
-) -> str:
-    """Generate intelligent biomechanical responses if GEMINI_API_KEY is not set."""
-    msg = req.message.lower()
-    sport = (req.sport or "deadlift").lower()
+def _generate_fallback_response(req: AIChatRequest) -> str:
+    """Rich conversational responses covering deadlift topics when API key is unavailable."""
+    msg = req.message.lower().strip()
 
-    if "deadlift" in msg or sport == "deadlift":
-        if "spine" in msg or "back" in msg or "pain" in msg or "round" in msg:
-            return (
-                "To maintain a neutral spine during conventional deadlifts, focus on packing your lats "
-                "before the bar leaves the floor. Think about pulling your shoulder blades down into your back pockets "
-                "and wedging your hips into the bar. Maintain a 45-degree angle in your gaze to keep your cervical spine aligned."
-            )
-        elif "score" in msg or "result" in msg or "form" in msg:
-            if req.ai_report_context:
-                score = req.ai_report_context.get("ai_score", 100)
-                risk = req.ai_report_context.get("risk_level", "Low Risk")
-                return (
-                    f"Your current AI Form Score is {score}/100 with a risk rating of '{risk}'. "
-                    f"{req.ai_report_context.get('summary', '')}"
-                )
-            return "Your deadlift form has been scanned. Check the metric bars above for hip and knee lockout angles!"
-        elif "drill" in msg or "exercise" in msg or "fix" in msg:
-            return (
-                "Top recommended deadlift drills:\n"
-                "1. **Paused Deadlifts (1 inch off floor)** — Teaches leg drive without hips shooting up.\n"
-                "2. **Romanian Deadlifts (RDLs)** — Reinforces the hip hinge pattern and hamstring loading.\n"
-                "3. **Kettlebell Swings** — Builds explosive terminal hip lockout."
-            )
-        elif "cue" in msg or "tip" in msg:
-            return (
-                "Key Deadlift Cues:\n"
-                "• 'Push the floor away with your feet' rather than pulling with your upper body.\n"
-                "• 'Pull the slack out of the bar' before lifting heavy weight.\n"
-                "• 'Lock out by squeezing your glutes forward' at the top."
-            )
-        else:
-            return (
-                f"In conventional deadlifting, success comes down to a tight setup, driving through the mid-foot, "
-                f"and extending hips and knees simultaneously. Feel free to ask about lat engagement, hip position, or corrective drills!"
-            )
-    else:  # Bowling
+    if "lat" in msg or "shoulder blade" in msg or "upper back" in msg:
         return (
-            "In fast bowling, maintaining front leg brace at landing maximizes energy transfer into ball release while "
-            "protecting the lower back from excessive rotational strain. Keep your bowling arm extension consistent throughout the delivery stride!"
+            "**How to Properly Engage Your Lats in the Deadlift:**\n\n"
+            "1. **'Protect Your Armpits' Cue:** Imagine squeezing oranges in your armpits before the bar leaves the floor.\n"
+            "2. **'Squeeze the Bar into Your Shins':** Actively pull the bar back toward your legs using your latissimus dorsi.\n"
+            "3. **Depress Your Scapulae:** Pull your shoulder blades down into your back pockets.\n"
+            "4. **Pull the Slack:** Wedging into the bar until you hear the metal click ensures full torso tension before leg drive."
         )
 
+    elif "spine" in msg or "back" in msg or "pain" in msg or "round" in msg:
+        return (
+            "**Preventing Lower Back Rounding & Pain in Deadlifts:**\n\n"
+            "1. **Spinal Neutrality:** Maintain a straight line from crown of head through thoracic and lumbar spine.\n"
+            "2. **Bracing:** Take a deep 360-degree intra-abdominal breath into your belt/core before pulling.\n"
+            "3. **Leg Drive First:** Drive the floor away using quads so hips and chest rise together."
+        )
+
+    elif "sumo" in msg or "stance" in msg or "width" in msg:
+        return (
+            "**Sumo vs. Conventional Deadlift Mechanics:**\n\n"
+            "* **Conventional:** Narrow stance, wider hip hinge angle, greater lower back erector demand.\n"
+            "* **Sumo:** Wide stance, toe flare, shorter vertical torso moment arm, higher quad/adductor engagement."
+        )
+
+    return (
+        f"**AI Biomechanics Guidance for '{req.message}':**\n\n"
+        "In deadlifting, optimum force production requires:\n"
+        "1. **Mid-Foot Bar Path:** Keeping the barbell centered directly over the mid-foot.\n"
+        "2. **Simultaneous Extension:** Knees and hips locking out together at the top of the pull.\n"
+        "3. **Posterior Chain Drive:** Squeezing glutes hard into the bar to finish terminal lockout without hyper-extending."
+    )
+
+
+# ── Endpoint Handler ────────────────────────────────────────────────────────
 
 @router.post("/chat", response_model=AIChatResponse)
 async def ai_chat(req: AIChatRequest):
-    """Send a message to the Gemini-powered biomechanics coach (with smart offline fallback)."""
+    """Send a message to the AI Biomechanics Coach (powered by Gemini Flash)."""
     api_key = os.environ.get("GEMINI_API_KEY", "")
 
     if not api_key:
-        # Use intelligent biomechanics fallback when key is not configured
         reply_text = _generate_fallback_response(req)
         return AIChatResponse(reply=reply_text)
 
     try:
         from google import genai
+        from google.genai import types
 
         client = genai.Client(api_key=api_key)
         system_prompt = _build_system_prompt(
@@ -191,25 +140,50 @@ async def ai_chat(req: AIChatRequest):
 
         contents = []
         for msg in req.history:
+            if msg.text.strip() == req.message.strip() and msg.role == "user":
+                continue
             role = "user" if msg.role == "user" else "model"
             contents.append({"role": role, "parts": [{"text": msg.text}]})
 
         contents.append({"role": "user", "parts": [{"text": req.message}]})
 
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=contents,
-            config=genai.types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=0.7,
-                max_output_tokens=1024,
-            ),
-        )
+        # Try Gemini Flash models with generous output token limit (4096 tokens)
+        candidate_models = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"]
+        response = None
 
-        reply_text = response.text or _generate_fallback_response(req)
-        return AIChatResponse(reply=reply_text)
+        for m_name in candidate_models:
+            try:
+                response = client.models.generate_content(
+                    model=m_name,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=0.7,
+                        max_output_tokens=4096,
+                    ),
+                )
+                if response:
+                    break
+            except Exception:
+                continue
+
+        reply_text = ""
+        if response and hasattr(response, "candidates") and response.candidates:
+            if response.candidates[0].content:
+                for part in response.candidates[0].content.parts:
+                    if hasattr(part, "text") and part.text:
+                        if getattr(part, "thought", False):
+                            continue
+                        reply_text += part.text
+
+        if not reply_text and response and hasattr(response, "text"):
+            reply_text = response.text or ""
+
+        if not reply_text.strip():
+            reply_text = _generate_fallback_response(req)
+
+        return AIChatResponse(reply=reply_text.strip())
 
     except Exception as e:
-        # Fallback gracefully if API rate limit or error occurs
         reply_text = _generate_fallback_response(req)
         return AIChatResponse(reply=reply_text)

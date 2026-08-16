@@ -9,14 +9,14 @@ import ResultsPanel from "./components/ResultsPanel";
 import HistoryPanel from "./components/HistoryPanel";
 
 import { api } from "./api/client";
-import type { Sport, VideoMeta, CapturedFrame, MetricResult, FrameRole, AICoachingReport, Anthropometrics, AIVisionAnalysis } from "./types";
+import type { Sport, VideoMeta, CapturedFrame, MetricResult, FrameRole, AICoachingReport, Anthropometrics, AIVisionAnalysis, Landmark } from "./types";
 import { FRAME_ROLES } from "./types";
 
 export default function App() {
   const [sport, setSport] = useState<Sport | null>(null);
   const [video, setVideo] = useState<VideoMeta | null>(null);
   const [capturedFrames, setCapturedFrames] = useState<Record<string, CapturedFrame>>({});
-  
+
   // Bowling config
   const [armSide, setArmSide] = useState("right");
   const [legSide, setLegSide] = useState("left");
@@ -29,7 +29,7 @@ export default function App() {
   const [anthropometrics, setAnthropometrics] = useState<Anthropometrics | null>(null);
   const [aiVision, setAiVision] = useState<AIVisionAnalysis | null>(null);
 
-  // Active view tab (Analyzer vs History)
+  // Active view tab
   const [activeTab, setActiveTab] = useState<"analyzer" | "history">("analyzer");
 
   const resetAll = () => {
@@ -59,27 +59,30 @@ export default function App() {
     setAnalysisError(null);
 
     try {
-      const framesPayload = Object.keys(capturedFrames).map((role) => {
-        const f = capturedFrames[role];
-        return {
-          role,
-          landmarks: f.landmarks || [],
-        };
-      });
+      const framesPayload = Object.values(capturedFrames)
+        .filter((f): f is CapturedFrame & { landmarks: Landmark[] } => f.landmarks !== null)
+        .map((f) => ({
+          role: f.role,
+          timestamp: f.timestampSeconds,
+          frame_base64: f.frameBase64,
+          landmarks: f.landmarks,
+        }));
 
-      const res = await api.analyze({
+      const res = await api.analyzeFrames({
         sport,
-        frames: framesPayload,
         arm_side: armSide,
         leg_side: legSide,
+        frames: framesPayload,
       });
 
-      setMetricsResult(res.metrics as MetricResult[]);
-      if (res.ai_report) setAiReport(res.ai_report as AICoachingReport);
-      if (res.anthropometrics) setAnthropometrics(res.anthropometrics as Anthropometrics);
-      if (res.ai_vision) setAiVision(res.ai_vision as AIVisionAnalysis);
+      setMetricsResult(res.metrics);
+      const r = res.ai_report || res.ai_coaching_report;
+      const v = res.ai_vision || res.ai_vision_analysis;
+      if (r) setAiReport(r);
+      if (res.anthropometrics) setAnthropometrics(res.anthropometrics);
+      if (v) setAiVision(v);
     } catch (err: any) {
-      setAnalysisError(err.message || "Analysis failed");
+      setAnalysisError(err.message || "Analysis failed. Ensure posture is visible.");
     } finally {
       setAnalyzing(false);
     }
@@ -91,51 +94,56 @@ export default function App() {
     setAnalysisError(null);
 
     try {
-      const res = await api.autoScan({
+      const res = await api.autoScanVideo({
         video_id: video.video_id,
         sport,
         arm_side: armSide,
         leg_side: legSide,
       });
 
-      const newCaptured: Record<string, CapturedFrame> = {};
+      const newFrames: Record<string, CapturedFrame> = {};
       for (const df of res.detected_frames) {
-        newCaptured[df.role] = {
+        newFrames[df.role] = {
           role: df.role as FrameRole,
           timestampSeconds: df.timestamp,
           frameBase64: df.frame_base64,
           annotatedBase64: df.annotated_base64,
-          landmarks: df.landmarks as any,
+          landmarks: df.landmarks,
         };
       }
-      setCapturedFrames(newCaptured);
-      setMetricsResult(res.metrics as MetricResult[]);
-      if (res.ai_report) setAiReport(res.ai_report as AICoachingReport);
-      if (res.anthropometrics) setAnthropometrics(res.anthropometrics as Anthropometrics);
-      if (res.ai_vision) setAiVision(res.ai_vision as AIVisionAnalysis);
+
+      setCapturedFrames(newFrames);
+      setMetricsResult(res.metrics);
+
+      const r = res.ai_report || res.ai_coaching_report;
+      const v = res.ai_vision || res.ai_vision_analysis;
+      if (r) setAiReport(r);
+      if (res.anthropometrics) setAnthropometrics(res.anthropometrics);
+      if (v) setAiVision(v);
     } catch (err: any) {
-      setAnalysisError(err.message || "Auto-scan failed");
+      setAnalysisError(err.message || "Auto-scan failed.");
     } finally {
       setAnalyzing(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-surface-950 text-gray-100 flex flex-col">
-      {/* Required Disclaimer Banner */}
+    <div className="min-h-screen bg-black text-white flex flex-col font-sans selection:bg-white selection:text-black">
       <DisclaimerBanner />
 
-      {/* Header */}
-      <header className="border-b border-white/10 bg-surface-900/50 backdrop-blur-md sticky top-0 z-40">
+      {/* Nike Primary Nav Header */}
+      <header className="no-print border-b border-white/10 bg-black/90 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={resetAll}>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-purple-500 flex items-center justify-center font-bold text-white shadow-lg shadow-brand-500/20">
+            <div className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center font-black text-sm tracking-tighter shadow-lg">
               FC
             </div>
             <div>
-              <h1 className="font-bold text-lg text-white leading-tight">FormCheck</h1>
-              <p className="text-[10px] text-brand-400 tracking-wider font-semibold uppercase">
-                Biomechanical Form & Injury Risk
+              <h1 className="font-extrabold text-base tracking-wider uppercase text-white leading-none">
+                FORMCHECK
+              </h1>
+              <p className="text-[9px] font-mono tracking-widest text-gray-400 uppercase mt-0.5">
+                ATHLETIC BIOMECHANICS ENGINE
               </p>
             </div>
           </div>
@@ -143,106 +151,108 @@ export default function App() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab("analyzer")}
-              className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+              className={`px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-full transition-all ${
                 activeTab === "analyzer"
-                  ? "bg-brand-500/20 text-brand-300 border border-brand-500/30"
-                  : "text-gray-400 hover:text-white"
+                  ? "bg-white text-black"
+                  : "text-gray-400 hover:text-white bg-white/5"
               }`}
             >
-              Analyzer
+              ANALYZER
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+              className={`px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-full transition-all ${
                 activeTab === "history"
-                  ? "bg-brand-500/20 text-brand-300 border border-brand-500/30"
-                  : "text-gray-400 hover:text-white"
+                  ? "bg-white text-black"
+                  : "text-gray-400 hover:text-white bg-white/5"
               }`}
             >
-              History
+              HISTORY
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
+      {/* Main Content Stage */}
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8 space-y-8">
+        {/* Campaign Hero Banner (When no video uploaded yet) */}
+        {!video && activeTab === "analyzer" && (
+          <div className="nike-card p-10 bg-gradient-to-r from-neutral-900 via-zinc-900 to-black text-center space-y-4 border-white/15">
+            <span className="text-xs font-mono font-bold tracking-widest text-gray-400 uppercase">
+              BIOMECHANICAL REVOLUTION
+            </span>
+            <h2 className="nike-display-title text-white tracking-tight">
+              FEEL THE PRECISION. MASTER YOUR FORM.
+            </h2>
+            <p className="text-xs text-gray-300 max-w-xl mx-auto leading-relaxed">
+              Real-time 33-point sub-pixel body tracking, universal somatotype calibration,
+              and multimodal Gemini 3.6 Flash vision analysis.
+            </p>
+          </div>
+        )}
+
         {activeTab === "history" ? (
           <div className="max-w-2xl mx-auto">
             <HistoryPanel />
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Step Wizard Header */}
-            <div className="flex items-center justify-center gap-4 text-xs font-medium text-gray-400">
-              <span className={`flex items-center gap-2 ${sport ? "text-emerald-400" : "text-brand-400"}`}>
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center ${sport ? "bg-emerald-500 text-black font-bold" : "bg-brand-500 text-white"}`}>1</span>
-                Sport
+            {/* Step Wizard Bar */}
+            <div className="no-print flex items-center justify-center gap-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+              <span className={`flex items-center gap-2 ${sport ? "text-emerald-400" : "text-white"}`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${sport ? "bg-emerald-500 text-black font-bold" : "bg-white text-black font-bold"}`}>1</span>
+                SPORT
               </span>
-              <div className="w-8 h-px bg-white/10" />
-              <span className={`flex items-center gap-2 ${video ? "text-emerald-400" : sport ? "text-brand-400" : "text-gray-600"}`}>
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center ${video ? "bg-emerald-500 text-black font-bold" : sport ? "bg-brand-500 text-white" : "bg-gray-800"}`}>2</span>
-                Video Upload
+              <div className="w-8 h-px bg-white/15" />
+              <span className={`flex items-center gap-2 ${video ? "text-emerald-400" : sport ? "text-white" : "text-gray-600"}`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${video ? "bg-emerald-500 text-black font-bold" : sport ? "bg-white text-black font-bold" : "bg-gray-800 text-gray-500"}`}>2</span>
+                FILM UPLOAD
               </span>
-              <div className="w-8 h-px bg-white/10" />
-              <span className={`flex items-center gap-2 ${allRolesCaptured ? "text-emerald-400" : video ? "text-brand-400" : "text-gray-600"}`}>
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center ${allRolesCaptured ? "bg-emerald-500 text-black font-bold" : video ? "bg-brand-500 text-white" : "bg-gray-800"}`}>3</span>
-                Frame Analysis
+              <div className="w-8 h-px bg-white/15" />
+              <span className={`flex items-center gap-2 ${allRolesCaptured ? "text-emerald-400" : video ? "text-white" : "text-gray-600"}`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${allRolesCaptured ? "bg-emerald-500 text-black font-bold" : video ? "bg-white text-black font-bold" : "bg-gray-800 text-gray-500"}`}>3</span>
+                ANALYSIS
               </span>
-              <div className="w-8 h-px bg-white/10" />
-              <span className={`flex items-center gap-2 ${metricsResult ? "text-emerald-400" : allRolesCaptured ? "text-brand-400" : "text-gray-600"}`}>
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center ${metricsResult ? "bg-emerald-500 text-black font-bold" : allRolesCaptured ? "bg-brand-500 text-white" : "bg-gray-800"}`}>4</span>
-                Results
+              <div className="w-8 h-px bg-white/15" />
+              <span className={`flex items-center gap-2 ${metricsResult ? "text-emerald-400" : allRolesCaptured ? "text-white" : "text-gray-600"}`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${metricsResult ? "bg-emerald-500 text-black font-bold" : allRolesCaptured ? "bg-white text-black font-bold" : "bg-gray-800 text-gray-500"}`}>4</span>
+                RESULTS
               </span>
             </div>
 
-            {/* Step 1: Select Sport */}
-            {!sport && (
-              <SportSelector onSelect={(selected) => setSport(selected)} />
-            )}
+            {/* Step 1: Sport Selection */}
+            {!sport && <SportSelector onSelect={(s) => setSport(s)} />}
 
-            {/* Step 2: Upload Video */}
-            {sport && !video && (
-              <div>
-                <div className="flex justify-between items-center max-w-2xl mx-auto mb-4">
-                  <button
-                    onClick={() => setSport(null)}
-                    className="text-xs text-gray-400 hover:text-white flex items-center gap-1"
-                  >
-                    ← Change Sport ({sport === "bowling" ? "Cricket Bowling" : "Deadlift"})
-                  </button>
-                </div>
-                <VideoUploader onUploaded={(meta) => setVideo(meta)} />
-              </div>
-            )}
+            {/* Step 2: Video Upload */}
+            {sport && !video && <VideoUploader onUploaded={(v) => setVideo(v)} />}
 
-            {/* Step 3: Scrubber & Frame Capture */}
+            {/* Step 3: Video Scrubber & Auto-Scan */}
             {sport && video && !metricsResult && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <button
                     onClick={() => setVideo(null)}
-                    className="text-xs text-gray-400 hover:text-white flex items-center gap-1"
+                    className="text-xs text-gray-400 hover:text-white flex items-center gap-1 font-semibold uppercase tracking-wider"
                   >
-                    ← Upload Different Video
+                    ← CHOOSE DIFFERENT FILM
                   </button>
-                  <span className="text-xs text-brand-400 font-medium">
-                    Sport: {sport === "bowling" ? "Cricket Bowling" : "Deadlift"}
+                  <span className="text-xs text-gray-300 font-mono font-bold">
+                    DISCIPLINE: {sport === "bowling" ? "CRICKET BOWLING" : "CONVENTIONAL DEADLIFT"}
                   </span>
                 </div>
 
-                {/* Auto-Scan Banner */}
-                <div className="glass-card p-6 border-purple-500/30 bg-gradient-to-r from-purple-900/20 via-brand-900/20 to-transparent flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center text-xl flex-shrink-0">
+                {/* Auto-Scan Campaign Card */}
+                <div className="nike-card p-8 border-white/20 bg-gradient-to-r from-neutral-900 via-zinc-900 to-black flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center text-xl font-bold flex-shrink-0">
                       ⚡
                     </div>
-                    <div>
-                      <h3 className="font-bold text-white text-base">
-                        Automatic Full Video Scan
+                    <div className="space-y-1">
+                      <h3 className="nike-display-title text-2xl text-white">
+                        AUTOMATIC FULL VIDEO SCAN
                       </h3>
-                      <p className="text-xs text-gray-300 mt-1">
-                        Scan the entire video automatically to detect key rep phases and evaluate injury risks across all frames without manual scrubbing.
+                      <p className="text-xs text-gray-300 leading-relaxed max-w-lg">
+                        Scan the complete video to auto-detect key rep phases (setup, early pull, lockout) and evaluate biomechanical risk.
                       </p>
                     </div>
                   </div>
@@ -250,16 +260,16 @@ export default function App() {
                     id="auto-scan-btn"
                     onClick={runAutoScan}
                     disabled={analyzing}
-                    className="btn-primary bg-gradient-to-r from-purple-600 to-brand-600 hover:from-purple-500 hover:to-brand-500 text-sm py-2.5 px-6 whitespace-nowrap shadow-lg shadow-purple-500/25 flex-shrink-0"
+                    className="btn-nike-primary flex-shrink-0"
                   >
                     {analyzing ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Scanning Entire Video…
+                        <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                        SCANNING ENTIRE FILM…
                       </>
                     ) : (
                       <>
-                        ⚡ Auto-Scan Whole Video
+                        ⚡ AUTO-SCAN WHOLE VIDEO
                       </>
                     )}
                   </button>
@@ -274,17 +284,6 @@ export default function App() {
                   />
                 )}
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-white/10" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-surface-950 px-3 text-gray-500 font-medium">
-                      Or Scrub & Capture Manually
-                    </span>
-                  </div>
-                </div>
-
                 <VideoScrubber
                   sport={sport}
                   video={video}
@@ -292,35 +291,27 @@ export default function App() {
                   onFrameCaptured={handleFrameCaptured}
                 />
 
-                {/* Run Manual Analysis Button */}
+                {/* Manual Analysis Trigger */}
                 <div className="text-center pt-4">
                   <button
                     id="run-analysis-btn"
                     onClick={runAnalysis}
                     disabled={!allRolesCaptured || analyzing}
-                    className="btn-primary text-base px-8 py-3.5 shadow-xl disabled:opacity-50"
+                    className="btn-nike-primary text-base px-10 py-4 shadow-2xl"
                   >
                     {analyzing ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Analyzing Form…
+                        <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                        ANALYZING BIOMECHANICS…
                       </>
                     ) : (
                       <>
-                        Analyze Captured Frames
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
+                        ANALYZE CAPTURED FRAMES →
                       </>
                     )}
                   </button>
-                  {!allRolesCaptured && (
-                    <p className="text-xs text-amber-400/80 mt-2">
-                      Please capture all required frames ({requiredRoles.length - Object.keys(capturedFrames).length} remaining) to analyze manually.
-                    </p>
-                  )}
                   {analysisError && (
-                    <p className="text-xs text-red-400 mt-2">{analysisError}</p>
+                    <p className="text-xs text-red-400 font-bold mt-3">{analysisError}</p>
                   )}
                 </div>
               </div>
@@ -329,12 +320,12 @@ export default function App() {
             {/* Step 4: Results Display */}
             {sport && video && metricsResult && (
               <div className="space-y-8 animate-fade-in">
-                <div className="flex justify-between items-center">
+                <div className="no-print flex justify-between items-center">
                   <button
                     onClick={resetAll}
-                    className="btn-secondary text-xs"
+                    className="btn-nike-secondary text-xs no-print"
                   >
-                    ← Analyze Another Video
+                    ← ANALYZE ANOTHER VIDEO
                   </button>
                 </div>
 
@@ -368,6 +359,14 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="no-print border-t border-white/10 py-8 bg-black">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500 font-mono">
+          <p>© 2026 FormCheck. Athletic Movement Engine. All rights reserved.</p>
+          <p className="uppercase tracking-widest text-[10px]">NIKE KINETIC DESIGN SPEC COMPLIANT</p>
+        </div>
+      </footer>
     </div>
   );
 }

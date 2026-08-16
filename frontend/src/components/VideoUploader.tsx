@@ -1,5 +1,6 @@
 /**
- * VideoUploader — drag-and-drop zone with progress indicator.
+ * VideoUploader (Nike Retail Stage Dropzone)
+ * High-contrast video upload stage with Nike primary pill buttons and drag-drop feedback.
  */
 import { useCallback, useState } from "react";
 import { api } from "../api/client";
@@ -17,7 +18,7 @@ export default function VideoUploader({ onUploaded }: Props) {
   const handleFile = useCallback(
     async (file: File) => {
       if (!file.type.startsWith("video/")) {
-        setError("Please upload a video file.");
+        setError("Please upload a video file (.mp4, .mov, .webm).");
         return;
       }
       setError(null);
@@ -53,73 +54,65 @@ export default function VideoUploader({ onUploaded }: Props) {
   );
 
   return (
-    <div className="animate-slide-up max-w-2xl mx-auto">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-white mb-2">Upload Your Video</h2>
-        <p className="text-gray-400 text-sm">
-          Record from a side-on camera angle for best pose-detection accuracy.
+    <div className="animate-slide-up max-w-2xl mx-auto space-y-6">
+      <div className="text-center space-y-2">
+        <span className="text-xs font-mono font-bold tracking-widest text-gray-400 uppercase">
+          STAGE 02 / VIDEO INPUT
+        </span>
+        <h2 className="nike-display-title text-white tracking-tight text-4xl sm:text-5xl">
+          UPLOAD MOVEMENT FILM
+        </h2>
+        <p className="text-xs text-gray-400 max-w-md mx-auto">
+          Record at 30+ FPS from a side-profile view for 33-point sub-pixel kinematic tracking.
         </p>
       </div>
 
-      <label
-        id="video-drop-zone"
+      <div
         onDragOver={(e) => {
           e.preventDefault();
           setDragging(true);
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`
-          glass-card flex flex-col items-center justify-center gap-4 p-12
-          cursor-pointer transition-all duration-300
-          ${dragging ? "border-brand-500/60 bg-brand-500/10 scale-[1.02]" : "hover:border-white/20"}
-          ${uploading ? "pointer-events-none opacity-60" : ""}
-        `}
+        className={`nike-card p-10 text-center transition-all duration-300 ${
+          dragging ? "border-white bg-white/10 scale-[1.01]" : "border-white/15 bg-white/[0.03]"
+        }`}
       >
-        {uploading ? (
-          <>
-            <div className="w-10 h-10 border-3 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
-            <p className="text-gray-300 font-medium">Uploading…</p>
-          </>
-        ) : (
-          <>
-            <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-brand-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-                />
-              </svg>
-            </div>
-            <div className="text-center">
-              <p className="text-gray-200 font-medium mb-1">
-                Drag & drop your video here
-              </p>
-              <p className="text-gray-500 text-sm">or click to browse files</p>
-            </div>
+        <div className="space-y-4">
+          <div className="w-16 h-16 rounded-full bg-white/10 mx-auto flex items-center justify-center text-2xl border border-white/15">
+            📹
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white uppercase tracking-wider">
+              {dragging ? "DROP FILM TO UPLOAD" : "DRAG & DROP VIDEO FILM HERE"}
+            </h3>
+            <p className="text-xs text-gray-400 mt-1">Supports MP4, MOV, WEBM up to 100MB</p>
+          </div>
+
+          <label className="inline-block cursor-pointer">
             <input
               type="file"
               accept="video/*"
               onChange={onFileSelect}
               className="hidden"
-              id="video-file-input"
             />
-          </>
-        )}
-      </label>
+            <span className="btn-nike-primary">
+              {uploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  UPLOADING FILM…
+                </>
+              ) : (
+                <>CHOOSE VIDEO FILE →</>
+              )}
+            </span>
+          </label>
 
-      {error && (
-        <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
-          {error}
+          {error && (
+            <p className="text-xs text-red-400 font-semibold mt-2">{error}</p>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

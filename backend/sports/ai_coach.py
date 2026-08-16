@@ -32,7 +32,6 @@ def generate_ai_coaching_report(
     # Calculate AI Form Efficiency Score (0-100)
     if total_metrics > 0:
         base_score = (passed_metrics / total_metrics) * 100
-        # Deduct proportional penalty based on magnitude of deviation
         deviation_penalty = 0.0
         for m in metrics:
             if m.get("flagged"):
@@ -60,7 +59,6 @@ def generate_ai_coaching_report(
         risk_level = "High Injury Risk"
         risk_color = "red"
 
-    # Sport-specific AI coaching insights
     insights = []
     recommended_drills = []
     cues = []
@@ -104,7 +102,7 @@ def generate_ai_coaching_report(
                     insights.append({
                         "category": "Arm Trajectory",
                         "title": "Clean Arm Path",
-                        "detail": f"Elbow extension ({val}°) is stable within biomechanical tolerance limits.",
+                        "detail": f"Elbow extension ({val}°) is stable within biomechanical tolerance limits (0°–15°).",
                     })
 
             elif name == "front_knee_angle":
@@ -122,6 +120,12 @@ def generate_ai_coaching_report(
                         "name": "Weighted Step-Down Bracing Drills",
                         "description": "Step off a 6-inch box onto your landing foot and lock the quad/knee immediately without bending.",
                     })
+                else:
+                    insights.append({
+                        "category": "Front Leg Brace",
+                        "title": "Solid Landing Brace",
+                        "detail": f"Front knee angle ({val}°) provides optimal rigid lever support during release.",
+                    })
 
             elif name == "shoulder_hip_separation":
                 if flagged:
@@ -137,6 +141,12 @@ def generate_ai_coaching_report(
                     recommended_drills.append({
                         "name": "Hip-Drive Cable / Band Rotations",
                         "description": "Anchor a resistance band behind you, initiate pelvic turn first, then follow through with upper torso.",
+                    })
+                else:
+                    insights.append({
+                        "category": "Torque & Rotation",
+                        "title": "Optimal Trunk Separation",
+                        "detail": f"Shoulder-hip separation ({val}°) aligns hip drive efficiently prior to ball release.",
                     })
 
     else:  # Deadlift
@@ -164,15 +174,21 @@ def generate_ai_coaching_report(
                         "category": "Leverage & Lumbar Load",
                         "title": f"Asynchronous Rise Ratio ({val})",
                         "detail": (
-                            f"AI Trajectory Tracker detected a rise ratio of {val} (target: 0.8–1.2). "
+                            f"AI Trajectory Tracker detected a rise ratio of {val} (target range: 0.5–1.4). "
                             "Your hips are shooting up faster than your shoulders early in the pull. "
                             "This turns the deadlift into a stiff-legged pull, dramatically multiplying lower-back shear."
                         ),
                     })
-                    cues.append("Push the floor away with your legs; chest and hips must rise at the exact same rate.")
+                    cues.append("Push the floor away with your feet; chest and hips must rise at the exact same rate.")
                     recommended_drills.append({
                         "name": "Paused Deadlifts (1 inch off floor)",
                         "description": "Lift the bar 1-2 inches off the ground, hold for 2 seconds to verify hips/chest rise together, then complete the pull.",
+                    })
+                else:
+                    insights.append({
+                        "category": "Leverage & Lumbar Load",
+                        "title": "Synchronized Torso & Hip Rise",
+                        "detail": f"Rise ratio ({val}) confirms hips and chest rise in sync without premature hip shoot-up.",
                     })
 
             elif name == "hip_lockout_angle":
@@ -181,14 +197,20 @@ def generate_ai_coaching_report(
                         "category": "Glute Activation & Rep Finish",
                         "title": f"Incomplete Hip Extension ({val}°)",
                         "detail": (
-                            "AI Extension Analyzer detected incomplete hip lockout at top. Stopping short of 165°-180° "
-                            "leaves the load suspended on the lumbar erectors instead of transferring weight onto strong gluteal muscles."
+                            f"AI Extension Analyzer detected incomplete hip lockout at top ({val}°, target: 160°–180°). "
+                            "Stopping short leaves the load suspended on the lumbar erectors instead of transferring weight onto strong gluteal muscles."
                         ),
                     })
                     cues.append("Stand tall at top and squeeze glutes forward into the bar; do not soft-hip the lockout.")
                     recommended_drills.append({
                         "name": "Kneeling Hip Thrusts with Band",
                         "description": "Reinforce terminal hip extension by thrusting hips forward against band resistance while kneeling.",
+                    })
+                else:
+                    insights.append({
+                        "category": "Glute Activation & Rep Finish",
+                        "title": "Complete Terminal Hip Lockout",
+                        "detail": f"Hip extension angle ({val}°) confirms full hip lockout over your mid-foot base of support.",
                     })
 
             elif name == "knee_lockout_angle":
@@ -197,14 +219,20 @@ def generate_ai_coaching_report(
                         "category": "Terminal Quad Lockout",
                         "title": f"Flexed Knees at Lockout ({val}°)",
                         "detail": (
-                            "AI Joint Position Detector found knee flexion at top of rep. Soft knees prevent full "
-                            "posterior chain lockout and may cause lift disqualification or unstable load balance."
+                            f"AI Joint Position Detector found knee flexion at top of rep ({val}°, target: 165°–180°). "
+                            "Soft knees prevent full posterior chain lockout and may cause lift disqualification."
                         ),
                     })
                     cues.append("Flex quads hard at the top to complete knee extension simultaneously with hip extension.")
                     recommended_drills.append({
                         "name": "Terminal Knee Extension (TKE) Drills",
                         "description": "Loop a heavy resistance band behind knee joint and flex quads to lock out against tension.",
+                    })
+                else:
+                    insights.append({
+                        "category": "Terminal Quad Lockout",
+                        "title": "Full Knee Lockout",
+                        "detail": f"Knee lockout angle ({val}°) confirms fully extended quad drive at the top of the rep.",
                     })
 
     return {

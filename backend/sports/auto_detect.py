@@ -41,13 +41,13 @@ def _mean_body_visibility(lms: list[dict]) -> float:
 
 def _encode_frame(frame_bgr: np.ndarray, landmarks: list[dict] | None = None) -> tuple[str, str | None]:
     """Encode a frame as base64 JPEG, plus an annotated base64 frame if landmarks present."""
-    _, buf = cv2.imencode(".jpg", frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    _, buf = cv2.imencode(".jpg", frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 98])
     b64 = base64.b64encode(buf).decode("utf-8")
 
     ann_b64 = None
     if landmarks:
         ann = draw_skeleton(frame_bgr, landmarks)
-        _, ann_buf = cv2.imencode(".jpg", ann, [cv2.IMWRITE_JPEG_QUALITY, 90])
+        _, ann_buf = cv2.imencode(".jpg", ann, [cv2.IMWRITE_JPEG_QUALITY, 98])
         ann_b64 = base64.b64encode(ann_buf).decode("utf-8")
 
     return b64, ann_b64

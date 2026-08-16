@@ -7,37 +7,39 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        display: ['"Bebas Neue"', 'Inter', 'Impact', 'sans-serif'],
+        sans: ['Inter', 'Helvetica Neue', 'Helvetica', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'Fira Code', 'monospace'],
       },
       colors: {
-        brand: {
-          50:  '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
+        nike: {
+          ink: '#111111',
+          canvas: '#ffffff',
+          cloud: '#f5f5f5',
+          charcoal: '#39393b',
+          ash: '#4b4b4d',
+          mute: '#707072',
+          stone: '#9e9ea0',
+          hairline: '#e5e5e5',
+          red: '#d30005',
+          green: '#007d48',
+          blue: '#1151ff',
+          teal: '#0a7281',
+          purple: '#7c3aed',
         },
-        surface: {
+        brand: {
           50:  '#f8fafc',
           100: '#f1f5f9',
-          800: '#1e293b',
-          850: '#172033',
+          500: '#111111',
+          600: '#111111',
           900: '#0f172a',
-          950: '#020617',
         },
       },
       animation: {
-        'fade-in': 'fadeIn 0.5s ease-out',
-        'slide-up': 'slideUp 0.5s ease-out',
+        'fade-in': 'fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+        'tap-collapse': 'tapCollapse 0.15s ease-out',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
-        'glow': 'glow 2s ease-in-out infinite alternate',
       },
       keyframes: {
         fadeIn: {
@@ -45,22 +47,20 @@ export default {
           '100%': { opacity: '1' },
         },
         slideUp: {
-          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '0%': { opacity: '0', transform: 'translateY(18px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        tapCollapse: {
+          '0%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(0.96)' },
+          '100%': { transform: 'scale(1)' },
         },
         pulseSoft: {
           '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.7' },
+          '50%': { opacity: '0.6' },
         },
-        glow: {
-          '0%': { boxShadow: '0 0 5px rgba(99,102,241,0.3), 0 0 20px rgba(99,102,241,0.1)' },
-          '100%': { boxShadow: '0 0 10px rgba(99,102,241,0.5), 0 0 40px rgba(99,102,241,0.2)' },
-        },
-      },
-      backdropBlur: {
-        xs: '2px',
       },
     },
   },
   plugins: [],
-}
+};

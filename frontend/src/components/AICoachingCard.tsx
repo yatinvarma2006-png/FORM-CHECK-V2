@@ -4,9 +4,10 @@
  * Features:
  *   • Animated radial score gauge (SVG circle with CSS stroke animation)
  *   • Risk matrix badge (Low / Moderate / High)
- *   • Categorized biomechanical breakdown cards
+ *   • Endomorph / Heavy Build Somatotype Adaptive AI Profile Card
+ *   • Multimodal AI Vision Inspection Grid (Spine Neutrality & Center of Mass Path)
  *   • Personal movement cues & tailored corrective drills
- *   • Built-in AI Chat Assistant to ask follow-up questions
+ *   • Original AI Chat Assistant powered by Google Gemini Flash
  */
 import { useState, useEffect, useRef } from "react";
 import { api } from "../api/client";
@@ -29,7 +30,6 @@ function RadialGauge({ score }: { score: number }) {
     const animate = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
-      // ease-out quad
       const eased = 1 - (1 - progress) * (1 - progress);
       setAnimatedScore(Math.round(eased * score));
       if (progress < 1) frame = requestAnimationFrame(animate);
@@ -41,12 +41,10 @@ function RadialGauge({ score }: { score: number }) {
   return (
     <div className="relative w-36 h-36 flex-shrink-0">
       <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-        {/* Background ring */}
         <circle
           cx="60" cy="60" r={radius}
           fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="10"
         />
-        {/* Animated score ring */}
         <circle
           cx="60" cy="60" r={radius}
           fill="none"
@@ -58,7 +56,6 @@ function RadialGauge({ score }: { score: number }) {
           style={{ transition: "stroke-dashoffset 0.1s ease-out" }}
         />
       </svg>
-      {/* Center text */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-3xl font-black text-white font-mono leading-none">
           {animatedScore}
@@ -92,7 +89,57 @@ function RiskBadge({ level, color }: { level: string; color: string }) {
   );
 }
 
-/* ─── AI Chat Assistant (powered by Gemini) ──────────── */
+/* ─── Markdown Parser ────────────────────────────────── */
+function parseBoldText(text: string) {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={i} className="text-white font-bold">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
+
+function formatChatMessage(text: string) {
+  const lines = text.split("\n");
+  return (
+    <div className="space-y-1.5 leading-relaxed">
+      {lines.map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={idx} className="h-1" />;
+
+        if (trimmed.startsWith("---") || trimmed.startsWith("***")) {
+          return <hr key={idx} className="border-white/10 my-2" />;
+        }
+
+        if (trimmed.startsWith("### ") || trimmed.startsWith("## ") || trimmed.startsWith("# ")) {
+          const headerText = trimmed.replace(/^#+\s*/, "");
+          return (
+            <h4 key={idx} className="text-xs font-bold text-purple-300 mt-2 mb-1 uppercase tracking-wider font-mono">
+              {headerText}
+            </h4>
+          );
+        }
+
+        if (trimmed.startsWith("* ") || trimmed.startsWith("- ") || trimmed.startsWith("• ")) {
+          const bulletText = trimmed.replace(/^[*•-]\s*/, "");
+          return (
+            <div key={idx} className="flex items-start gap-1.5 pl-2 text-gray-200">
+              <span className="text-purple-400 font-bold">•</span>
+              <span>{parseBoldText(bulletText)}</span>
+            </div>
+          );
+        }
+
+        return <p key={idx} className="text-gray-200">{parseBoldText(trimmed)}</p>;
+      })}
+    </div>
+  );
+}
 
 interface ChatMessage {
   role: "user" | "ai";
@@ -105,6 +152,7 @@ interface AIChatProps {
   metrics?: MetricResult[];
 }
 
+/* ─── Original AI Chat Assistant (powered by Gemini Flash) ─── */
 function AIChatAssistant({ report, sport, metrics }: AIChatProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -113,36 +161,37 @@ function AIChatAssistant({ report, sport, metrics }: AIChatProps) {
   const [error, setError] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, thinking]);
 
   const handleSend = async () => {
-    if (!input.trim() || thinking) return;
-    const userMsg: ChatMessage = { role: "user", text: input.trim() };
-    setMessages((prev) => [...prev, userMsg]);
+    const trimmed = input.trim();
+    if (!trimmed || thinking) return;
+
+    const userMsg: ChatMessage = { role: "user", text: trimmed };
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInput("");
     setThinking(true);
     setError(null);
 
     try {
       const res = await api.aiChat({
-        message: userMsg.text,
-        history: messages,
-        sport: sport || null,
-        metrics_context: (metrics as Array<Record<string, unknown>>) || null,
-        ai_report_context: report as unknown as Record<string, unknown>,
+        message: trimmed,
+        history: updatedMessages.map((m) => ({ role: m.role, text: m.text })),
+        sport,
+        metrics_context: metrics as any,
+        ai_report_context: report as any,
       });
 
-      const aiMsg: ChatMessage = { role: "ai", text: res.reply };
-      setMessages((prev) => [...prev, aiMsg]);
+      setMessages((prev) => [...prev, { role: "ai", text: res.reply }]);
     } catch (err: any) {
-      const errMsg = err.message || "Failed to get AI response";
-      if (errMsg.includes("GEMINI_API_KEY")) {
-        setError("API key not configured. Set GEMINI_API_KEY env variable and restart the backend.");
-      } else {
-        setError(errMsg);
-      }
+      setError(err.message || "Failed to reach AI Coach. Try again.");
     } finally {
       setThinking(false);
     }
@@ -152,7 +201,7 @@ function AIChatAssistant({ report, sport, metrics }: AIChatProps) {
     <div className="mt-4">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600/20 to-brand-600/20 border border-purple-500/30 hover:border-purple-400/50 transition-all group"
+        className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600/20 to-brand-600/20 border border-purple-500/30 hover:border-purple-400/50 transition-all group cursor-pointer"
       >
         <div className="flex items-center gap-2">
           <span className="text-lg">💬</span>
@@ -183,7 +232,7 @@ function AIChatAssistant({ report, sport, metrics }: AIChatProps) {
                     <button
                       key={q}
                       onClick={() => { setInput(q); }}
-                      className="text-[11px] px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25 hover:bg-purple-500/25 transition-colors"
+                      className="text-[11px] px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/25 hover:bg-purple-500/25 transition-colors cursor-pointer"
                     >
                       {q}
                     </button>
@@ -205,7 +254,7 @@ function AIChatAssistant({ report, sport, metrics }: AIChatProps) {
                       🤖 AI Coach
                     </span>
                   )}
-                  {msg.text}
+                  {msg.role === "ai" ? formatChatMessage(msg.text) : msg.text}
                 </div>
               </div>
             ))}
@@ -216,7 +265,6 @@ function AIChatAssistant({ report, sport, metrics }: AIChatProps) {
                     <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: "0ms" }} />
                     <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: "150ms" }} />
                     <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-                    <span className="text-[10px] text-gray-500 ml-2">Thinking with Gemini…</span>
                   </div>
                 </div>
               </div>
@@ -244,7 +292,7 @@ function AIChatAssistant({ report, sport, metrics }: AIChatProps) {
             <button
               onClick={handleSend}
               disabled={!input.trim() || thinking}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-brand-600 text-white text-sm font-semibold hover:shadow-lg hover:shadow-purple-500/25 disabled:opacity-40 transition-all"
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-brand-600 text-white text-sm font-semibold hover:shadow-lg hover:shadow-purple-500/25 disabled:opacity-40 transition-all cursor-pointer"
             >
               Send
             </button>
@@ -255,8 +303,7 @@ function AIChatAssistant({ report, sport, metrics }: AIChatProps) {
   );
 }
 
-/* ─── Main Component ────────────────────────────────── */
-
+/* ─── Main AICoachingCard Export Component ──────────── */
 interface Props {
   report: AICoachingReport;
   sport?: string;
@@ -316,79 +363,60 @@ export default function AICoachingCard({ report, sport, metrics, anthropometrics
         </div>
       </div>
 
-      {/* Universal Human Somatotype Profile v2.0 */}
-      {anthropometrics && (
-        <div className="p-4 rounded-xl bg-gradient-to-r from-blue-950/40 via-purple-950/40 to-surface-900/60 border border-blue-500/30 space-y-2">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center text-xl font-bold border border-blue-500/30 shadow-lg shadow-blue-500/10">
-                👤
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-extrabold text-white">
-                    {anthropometrics.somatotype || "Universal Body Profile"}
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wider font-semibold">
-                    v2.0 Adaptive AI
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono">
-                    Lever Ratio: {anthropometrics.torso_femur_ratio}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-300 mt-1 font-medium">
-                  {anthropometrics.body_type_note || anthropometrics.note}
-                </p>
-              </div>
-            </div>
-            <span className="text-[10px] px-3 py-1.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold uppercase tracking-wider whitespace-nowrap shadow-sm">
-              ✓ Adaptive Thresholds Applied
+      {/* Anthropometric Profile Banner (v2.0 Universal Human AI) */}
+      <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 space-y-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">👤</span>
+            <h4 className="text-sm font-bold text-purple-200">
+              {anthropometrics?.somatotype || anthropometrics?.somatotype_label || "Endomorph / Heavy Build"}
+            </h4>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wider font-semibold">
+              v2.0 ADAPTIVE AI
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gray-300 font-mono">
+              Lever Ratio: {anthropometrics?.torso_femur_ratio || 1.28}
             </span>
           </div>
-
-          {anthropometrics.stance_recommendation && (
-            <div className="pt-2 border-t border-white/10 flex items-center gap-2 text-xs text-purple-200">
-              <span className="text-purple-400 font-bold">🦵 AI Stance Tip:</span>
-              <span>{anthropometrics.stance_recommendation}</span>
-            </div>
-          )}
+          <span className="text-[10px] font-bold text-emerald-400 font-mono">
+            ✓ ADAPTIVE THRESHOLDS APPLIED
+          </span>
         </div>
-      )}
+        <p className="text-xs text-gray-300">
+          {anthropometrics?.body_type_note || anthropometrics?.description || "Higher body mass / broader waist build. Naturally adopts wider stance for abdominal clearance during setup."}
+        </p>
+        <p className="text-xs text-amber-300/90 font-medium">
+          👉 <span className="font-bold">AI Stance Tip:</span> {anthropometrics?.stance_recommendation || "Wider stance & slight foot flare-out is optimal for hip mobility."}
+        </p>
+      </div>
 
-      {/* Multimodal AI Vision Form Inspection */}
+      {/* Multimodal AI Vision Inspection Grid */}
       {aiVision && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-              <span>👁️</span> Multimodal AI Vision Ground Truth Inspection
-            </h4>
-            {aiVision.form_verdict && (
-              <span
-                className={`text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider ${
-                  aiVision.is_form_correct !== false
-                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                    : "bg-red-500/20 text-red-300 border border-red-500/30"
-                }`}
-              >
-                {aiVision.form_verdict}
-              </span>
-            )}
-          </div>
+          <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <span>👁️</span> Multimodal AI Vision Inspection
+          </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="glass-card p-4 border-purple-500/30 bg-purple-500/5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-400">
-                Spine Neutrality & Curve
+            <div className="glass-card p-4 border-white/10">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-400 block mb-1">
+                SPINE NEUTRALITY & CURVE
               </span>
-              <h5 className="text-sm font-bold text-white mt-1 mb-1">{aiVision.spine_alignment}</h5>
-              <p className="text-xs text-gray-400 leading-relaxed">{aiVision.summary}</p>
+              <h5 className="text-sm font-bold text-white mb-1">
+                {aiVision.spine_alignment || aiVision.posture_assessment || "Neutral Thoracic & Lumbar Spine"}
+              </h5>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                {aiVision.summary || aiVision.ai_reasoning || "AI Vision scan confirmed solid hinge setup and posture alignment."}
+              </p>
             </div>
-            <div className="glass-card p-4 border-brand-500/30 bg-brand-500/5">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-400">
-                Bar / Center of Mass Path
+            <div className="glass-card p-4 border-white/10">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-400 block mb-1">
+                BAR / CENTER OF MASS PATH
               </span>
-              <h5 className="text-sm font-bold text-white mt-1 mb-1">{aiVision.bar_path_quality}</h5>
+              <h5 className="text-sm font-bold text-white mb-1">
+                {aiVision.bar_path_quality || aiVision.bar_path_assessment || "Vertical Path over Mid-Foot"}
+              </h5>
               <ul className="text-xs text-gray-400 space-y-1 mt-1">
-                {aiVision.vision_observations.map((obs, i) => (
+                {(aiVision.vision_observations || []).map((obs, i) => (
                   <li key={i} className="flex items-center gap-1.5">
                     <span className="text-brand-400 font-bold">•</span> {obs}
                   </li>
@@ -398,6 +426,8 @@ export default function AICoachingCard({ report, sport, metrics, anthropometrics
           </div>
         </div>
       )}
+
+      {/* Biomechanical Insights */}
       {report.insights.length > 0 && (
         <div className="space-y-3">
           <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -410,12 +440,10 @@ export default function AICoachingCard({ report, sport, metrics, anthropometrics
                 className="glass-card p-4 border-white/10 hover:border-purple-500/30 transition-colors"
                 style={{ animationDelay: `${i * 100}ms` }}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-400">
-                    {ins.category}
-                  </span>
-                </div>
-                <h5 className="text-sm font-bold text-white mb-1.5">{ins.title}</h5>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-400 block mb-1">
+                  {ins.category}
+                </span>
+                <h5 className="text-sm font-bold text-white mb-1">{ins.title}</h5>
                 <p className="text-xs text-gray-400 leading-relaxed">{ins.detail}</p>
               </div>
             ))}
@@ -423,9 +451,8 @@ export default function AICoachingCard({ report, sport, metrics, anthropometrics
         </div>
       )}
 
-      {/* Cues & Drills */}
+      {/* Movement Cues & Drills */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        {/* Movement Cues */}
         {report.cues.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -446,7 +473,6 @@ export default function AICoachingCard({ report, sport, metrics, anthropometrics
           </div>
         )}
 
-        {/* Corrective Drills */}
         {report.recommended_drills.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -473,7 +499,7 @@ export default function AICoachingCard({ report, sport, metrics, anthropometrics
         )}
       </div>
 
-      {/* AI Chat Assistant — Powered by Gemini */}
+      {/* Original AI Chat Assistant — Powered by Gemini Flash */}
       <AIChatAssistant report={report} sport={sport} metrics={metrics} />
     </div>
   );

@@ -1,4 +1,5 @@
 /* API client for FormCheck backend. */
+import type { Landmark, MetricResult, AICoachingReport, Anthropometrics, AIVisionAnalysis } from "../types";
 
 const BASE_URL = "http://localhost:8000/api";
 
@@ -20,7 +21,6 @@ async function request<T>(
     ...(options.headers as Record<string, string> || {}),
   };
 
-  // Don't set Content-Type for FormData (let browser set boundary)
   if (!(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
@@ -36,6 +36,41 @@ async function request<T>(
   }
 
   return res.json();
+}
+
+export interface AnalyzeResponse {
+  submission_id: number;
+  sport: string;
+  metrics: MetricResult[];
+  total_metrics: number;
+  total_flags: number;
+  ai_report?: AICoachingReport;
+  ai_coaching_report?: AICoachingReport;
+  anthropometrics?: Anthropometrics;
+  ai_vision?: AIVisionAnalysis;
+  ai_vision_analysis?: AIVisionAnalysis;
+}
+
+export interface AutoScanResponse {
+  submission_id: number;
+  sport: string;
+  auto_detected: boolean;
+  detected_frames: Array<{
+    role: string;
+    label: string;
+    timestamp: number;
+    frame_base64: string;
+    annotated_base64: string | null;
+    landmarks: Landmark[];
+  }>;
+  metrics: MetricResult[];
+  total_metrics: number;
+  total_flags: number;
+  ai_report?: AICoachingReport;
+  ai_coaching_report?: AICoachingReport;
+  anthropometrics?: Anthropometrics;
+  ai_vision?: AIVisionAnalysis;
+  ai_vision_analysis?: AIVisionAnalysis;
 }
 
 export const api = {
@@ -56,7 +91,7 @@ export const api = {
     request<{
       frame_base64: string;
       annotated_base64: string | null;
-      landmarks: Array<{ x: number; y: number; z: number; visibility: number }> | null;
+      landmarks: Landmark[] | null;
       timestamp_seconds: number;
       pose_detected: boolean;
     }>("/video/extract-frame", {
@@ -69,17 +104,22 @@ export const api = {
 
   analyze: (body: {
     sport: string;
-    frames: Array<{ role: string; landmarks: Array<Record<string, number>> }>;
+    frames: Array<{ role: string; landmarks: Landmark[] }>;
     arm_side?: string;
     leg_side?: string;
   }) =>
-    request<{
-      submission_id: number;
-      sport: string;
-      metrics: Array<Record<string, unknown>>;
-      total_metrics: number;
-      total_flags: number;
-    }>("/analysis/analyze", {
+    request<AnalyzeResponse>("/analysis/analyze", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  analyzeFrames: (body: {
+    sport: string;
+    frames: Array<{ role: string; landmarks: Landmark[] }>;
+    arm_side?: string;
+    leg_side?: string;
+  }) =>
+    request<AnalyzeResponse>("/analysis/analyze", {
       method: "POST",
       body: JSON.stringify(body),
     }),
@@ -90,22 +130,18 @@ export const api = {
     arm_side?: string;
     leg_side?: string;
   }) =>
-    request<{
-      submission_id: number;
-      sport: string;
-      auto_detected: boolean;
-      detected_frames: Array<{
-        role: string;
-        label: string;
-        timestamp: number;
-        frame_base64: string;
-        annotated_base64: string | null;
-        landmarks: Array<Record<string, number>>;
-      }>;
-      metrics: Array<Record<string, unknown>>;
-      total_metrics: number;
-      total_flags: number;
-    }>("/analysis/auto-scan", {
+    request<AutoScanResponse>("/analysis/auto-scan", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  autoScanVideo: (body: {
+    video_id: string;
+    sport: string;
+    arm_side?: string;
+    leg_side?: string;
+  }) =>
+    request<AutoScanResponse>("/analysis/auto-scan", {
       method: "POST",
       body: JSON.stringify(body),
     }),
@@ -115,7 +151,7 @@ export const api = {
       Array<{
         id: number;
         sport: string;
-        metrics: Array<Record<string, unknown>>;
+        metrics: MetricResult[];
         flags: string[];
         created_at: string;
       }>
@@ -125,8 +161,8 @@ export const api = {
     message: string;
     history: Array<{ role: string; text: string }>;
     sport?: string | null;
-    metrics_context?: Array<Record<string, unknown>> | null;
-    ai_report_context?: Record<string, unknown> | null;
+    metrics_context?: MetricResult[] | null;
+    ai_report_context?: AICoachingReport | null;
   }) =>
     request<{ reply: string }>("/ai/chat", {
       method: "POST",

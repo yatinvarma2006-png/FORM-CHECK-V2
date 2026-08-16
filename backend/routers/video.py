@@ -88,7 +88,7 @@ async def extract_frame(req: ExtractFrameRequest):
     landmarks = detect_pose(frame)
 
     # Encode frame as base64 JPEG
-    _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 98])
     frame_b64 = base64.b64encode(buffer).decode("utf-8")
 
     # If landmarks found, also return an annotated frame
@@ -96,7 +96,7 @@ async def extract_frame(req: ExtractFrameRequest):
     if landmarks:
         annotated = draw_skeleton(frame, landmarks)
         _, ann_buffer = cv2.imencode(
-            ".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 90]
+            ".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 98]
         )
         annotated_b64 = base64.b64encode(ann_buffer).decode("utf-8")
 

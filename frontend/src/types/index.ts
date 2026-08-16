@@ -53,28 +53,33 @@ export interface AICoachingReport {
 }
 
 export interface Anthropometrics {
-  torso_length: number;
-  femur_length: number;
-  tibia_length: number;
-  arm_length: number;
-  torso_femur_ratio: number;
-  arm_torso_ratio: number;
-  lever_type: string;
-  note: string;
+  torso_length?: number;
+  femur_length?: number;
+  tibia_length?: number;
+  arm_length?: number;
+  torso_femur_ratio?: number;
+  arm_torso_ratio?: number;
+  lever_type?: string;
+  note?: string;
   somatotype?: string;
+  somatotype_label?: string;
   body_type_note?: string;
+  description?: string;
   stance_recommendation?: string;
 }
 
 export interface AIVisionAnalysis {
-  ai_vision_active: boolean;
+  ai_vision_active?: boolean;
   is_form_correct?: boolean;
   form_verdict?: string;
   primary_fault?: string | null;
-  spine_alignment: string;
-  bar_path_quality: string;
-  vision_observations: string[];
-  summary: string;
+  spine_alignment?: string;
+  posture_assessment?: string;
+  bar_path_quality?: string;
+  bar_path_assessment?: string;
+  vision_observations?: string[];
+  summary?: string;
+  ai_reasoning?: string;
 }
 
 export interface AnalysisResult {
@@ -105,22 +110,21 @@ export interface VideoMeta {
   height: number;
 }
 
-export interface FrameExtractionResult {
-  frame_base64: string;
-  annotated_base64: string | null;
-  landmarks: Landmark[] | null;
-  timestamp_seconds: number;
-  pose_detected: boolean;
+export interface FrameRoleConfig {
+  role: FrameRole;
+  label: string;
+  description: string;
+  optional?: boolean;
 }
 
-export const FRAME_ROLES: Record<Sport, { role: FrameRole; label: string; optional?: boolean }[]> = {
+export const FRAME_ROLES: Record<Sport, FrameRoleConfig[]> = {
   bowling: [
-    { role: "arm_horizontal", label: "Arm Horizontal" },
-    { role: "release", label: "Release" },
+    { role: "arm_horizontal", label: "Arm Horizontal", description: "Bowling arm reaches horizontal level during run-up" },
+    { role: "release", label: "Ball Release", description: "Point of ball release at delivery stride" },
   ],
   deadlift: [
-    { role: "setup", label: "Setup (bar on floor)" },
-    { role: "lockout", label: "Lockout (standing)" },
-    { role: "early_pull", label: "Early Pull (optional)", optional: true },
+    { role: "setup", label: "Setup (bar on floor)", description: "Barbell resting on floor before lift initiation" },
+    { role: "early_pull", label: "Early Pull (optional)", description: "Barbell 1-2 inches off floor", optional: true },
+    { role: "lockout", label: "Lockout (standing)", description: "Full vertical standing lockout position" },
   ],
 };

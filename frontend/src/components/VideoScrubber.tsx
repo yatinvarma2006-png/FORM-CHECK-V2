@@ -3,7 +3,7 @@
  */
 import { useRef, useState, useCallback, useEffect } from "react";
 import { api } from "../api/client";
-import type { CapturedFrame, FrameRole, Sport, VideoMeta } from "../types";
+import type { CapturedFrame, FrameRole, Sport, VideoMeta, FrameRoleConfig } from "../types";
 import { FRAME_ROLES } from "../types";
 
 interface Props {
@@ -164,7 +164,7 @@ export default function VideoScrubber({
 
           {/* Frame capture buttons */}
           <div className="flex flex-wrap gap-3">
-            {roles.map(({ role, label }) => {
+            {roles.map(({ role, label }: FrameRoleConfig) => {
               const captured = role in capturedFrames;
               const isCapturing = capturing === role;
               return (
@@ -216,7 +216,7 @@ export default function VideoScrubber({
       {/* Captured frame thumbnails */}
       {Object.keys(capturedFrames).length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {roles.map(({ role, label }) => {
+          {roles.map(({ role, label }: FrameRoleConfig) => {
             const frame = capturedFrames[role];
             if (!frame) return null;
             return (

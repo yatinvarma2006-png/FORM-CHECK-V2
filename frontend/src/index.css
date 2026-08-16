@@ -1,152 +1,163 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── Base styles ──────────────────────────────────────────────────── */
+/* ── Base ────────────────────────────────────────── */
 @layer base {
   body {
-    @apply bg-surface-950 text-gray-100 font-sans antialiased;
+    @apply bg-black text-white font-sans antialiased selection:bg-white selection:text-black;
   }
   
   ::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-surface-900;
+    background: #0f172a;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-surface-800 rounded-full;
+    background: #334155;
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-brand-600;
+    background: #ffffff;
   }
 }
 
-/* ── Component styles ─────────────────────────────────────────────── */
+/* ── Design Component Utilities ────────────────────────────────── */
 @layer components {
-  /* Glassmorphism card */
-  .glass-card {
-    @apply relative overflow-hidden rounded-2xl border border-white/10
-           bg-white/5 backdrop-blur-xl shadow-2xl;
-  }
-  .glass-card::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none;
-  }
-
-  /* Primary gradient button */
-  .btn-primary {
-    @apply relative inline-flex items-center justify-center gap-2 px-6 py-3
-           font-semibold text-white rounded-xl
-           bg-gradient-to-r from-brand-600 to-brand-500
-           hover:from-brand-500 hover:to-brand-400
-           transition-all duration-300 ease-out
-           shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40
-           hover:-translate-y-0.5 active:translate-y-0
-           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0;
+  /* Towering Display Lockup */
+  .nike-display-title {
+    font-family: 'Bebas Neue', 'Inter', sans-serif;
+    font-size: clamp(3rem, 7vw, 6rem);
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
   }
 
-  /* Secondary outline button */
-  .btn-secondary {
+  /* Universal Solid Primary Button */
+  .btn-nike-primary {
+    @apply inline-flex items-center justify-center gap-2 px-8 py-3.5
+           font-sans text-sm font-semibold tracking-wide uppercase text-black bg-white
+           rounded-full transition-all duration-200 ease-out
+           hover:bg-gray-200 active:scale-95 shadow-xl
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  /* Secondary Soft Cloud Button */
+  .btn-nike-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3
+           font-sans text-sm font-medium text-white bg-white/10
+           border border-white/15 rounded-full backdrop-blur-md
+           hover:bg-white/20 hover:border-white/30 transition-all duration-200
+           active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  /* Overlay Pill CTA on Photography */
+  .btn-nike-outline {
     @apply inline-flex items-center justify-center gap-2 px-5 py-2.5
-           font-medium text-gray-300 rounded-xl
-           border border-white/15 bg-white/5
-           hover:bg-white/10 hover:text-white hover:border-white/25
-           transition-all duration-200
-           disabled:opacity-50 disabled:cursor-not-allowed;
+           font-sans text-xs font-semibold uppercase tracking-wider text-black bg-white
+           rounded-full shadow-lg hover:bg-gray-100 transition-all active:scale-95;
   }
 
-  /* Metric card */
+  /* Standard Glass / Neutral Stage Card */
+  .nike-card {
+    @apply relative overflow-hidden rounded-2xl border border-white/10
+           bg-white/[0.04] backdrop-blur-xl transition-all duration-300;
+  }
+
+  .glass-card {
+    @apply relative overflow-hidden rounded-2xl border border-white/15
+           bg-neutral-900/90 backdrop-blur-xl transition-all duration-300 shadow-xl;
+  }
+
   .metric-card {
-    @apply glass-card p-5 transition-all duration-300;
+    @apply relative overflow-hidden rounded-2xl border border-white/15
+           bg-neutral-950 p-6 transition-all duration-300 shadow-2xl;
   }
-  .metric-card.ok {
-    @apply border-emerald-500/30 hover:border-emerald-500/50;
-  }
+
   .metric-card.flagged {
-    @apply border-red-500/30 hover:border-red-500/50;
+    @apply border-red-500/40 bg-gradient-to-r from-red-950/20 via-neutral-950 to-neutral-950;
   }
 
-  /* Section heading */
-  .section-heading {
-    @apply text-2xl font-bold bg-gradient-to-r from-white to-gray-400
-           bg-clip-text text-transparent;
+  .metric-card.ok {
+    @apply border-emerald-500/20 bg-neutral-950;
   }
 
-  /* Step indicator */
-  .step-dot {
-    @apply w-3 h-3 rounded-full transition-all duration-300;
-  }
-  .step-dot.active {
-    @apply bg-brand-500 shadow-lg shadow-brand-500/50 scale-125;
-  }
-  .step-dot.completed {
-    @apply bg-emerald-500 shadow-lg shadow-emerald-500/50;
-  }
-  .step-dot.inactive {
-    @apply bg-gray-700;
+  /* Status Pill Badges */
+  .badge-nike-success {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full
+           bg-emerald-500/20 text-emerald-300 border border-emerald-500/30
+           text-xs font-semibold tracking-wide font-mono;
   }
 
-  /* Input field */
-  .input-field {
-    @apply w-full px-4 py-3 rounded-xl
-           bg-white/5 border border-white/10
-           text-white placeholder-gray-500
-           focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20
-           transition-all duration-200;
-  }
-
-  /* Select dropdown */
-  .select-field {
-    @apply w-full px-4 py-3 rounded-xl appearance-none cursor-pointer
-           bg-white/5 border border-white/10
-           text-white
-           focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20
-           transition-all duration-200;
+  .badge-nike-flagged {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full
+           bg-red-500/20 text-red-300 border border-red-500/30
+           text-xs font-semibold tracking-wide font-mono;
   }
 }
 
-/* ── Utility classes ──────────────────────────────────────────────── */
-@layer utilities {
-  .text-gradient {
-    @apply bg-gradient-to-r from-brand-400 to-purple-400
-           bg-clip-text text-transparent;
-  }
-
-  .border-gradient {
-    border-image: linear-gradient(to right, rgb(99 102 241 / 0.5), rgb(168 85 247 / 0.5)) 1;
-  }
-
-  .animate-fade-in {
-    animation: fadeIn 0.5s ease-out both;
-  }
-
-  .animate-slide-up {
-    animation: slideUp 0.6s ease-out both;
-  }
-}
-
-/* ── Keyframes ────────────────────────────────────────────────────── */
+/* ── Keyframes & Animations ────────────────────────────────────────── */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Print / PDF High-Resolution Export Styles ─────────────────────── */
+@media print {
+  @page {
+    margin: 1.2cm;
+    size: A4 portrait;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print,
+  header,
+  footer,
+  nav,
+  input,
+  button,
+  .btn-nike-primary,
+  .btn-nike-secondary,
+  .btn-nike-outline {
+    display: none !important;
+  }
+
+  .nike-card,
+  .glass-card,
+  .metric-card {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 1.5rem !important;
+  }
+
+  h1, h2, h3, h4, h5, h6, p, span, div {
+    color: #0f172a !important;
   }
 }

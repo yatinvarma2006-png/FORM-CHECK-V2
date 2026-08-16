@@ -13,7 +13,7 @@ export default function HistoryPanel() {
     setLoading(true);
     try {
       const data = await api.getHistory();
-      setHistory(data as SubmissionHistory[]);
+      setHistory(data as any);
     } catch (err) {
       console.error("Failed to fetch history:", err);
     } finally {
