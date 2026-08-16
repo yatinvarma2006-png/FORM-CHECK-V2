@@ -243,11 +243,10 @@ function AIChatAssistant({ report, sport, metrics }: AIChatProps) {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed ${
-                    msg.role === "user"
+                  className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed ${msg.role === "user"
                       ? "bg-brand-600/30 text-brand-100 rounded-br-md"
                       : "bg-white/5 text-gray-200 border border-white/10 rounded-bl-md"
-                  }`}
+                    }`}
                 >
                   {msg.role === "ai" && (
                     <span className="text-purple-400 font-bold text-[10px] uppercase tracking-wider block mb-1">

@@ -353,6 +353,17 @@ export default function App() {
                   aiReport={aiReport || undefined}
                   anthropometrics={anthropometrics || undefined}
                   aiVision={aiVision || undefined}
+                  repDuration={(() => {
+                    if (sport === "deadlift" && capturedFrames.setup && capturedFrames.lockout) {
+                      const diff = capturedFrames.lockout.timestampSeconds - capturedFrames.setup.timestampSeconds;
+                      return Math.max(0.5, Math.round(diff * 100) / 100);
+                    }
+                    if (sport === "bowling" && capturedFrames.arm_horizontal && capturedFrames.release) {
+                      const diff = capturedFrames.release.timestampSeconds - capturedFrames.arm_horizontal.timestampSeconds;
+                      return Math.max(0.2, Math.round(diff * 100) / 100);
+                    }
+                    return null;
+                  })()}
                 />
               </div>
             )}

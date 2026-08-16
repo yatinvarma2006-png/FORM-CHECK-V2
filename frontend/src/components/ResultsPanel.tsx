@@ -11,11 +11,55 @@ interface Props {
   aiReport?: AICoachingReport;
   anthropometrics?: Anthropometrics;
   aiVision?: AIVisionAnalysis;
+  repDuration?: number | null;
 }
 
-export default function ResultsPanel({ metrics, sport, aiReport, anthropometrics, aiVision }: Props) {
+export default function ResultsPanel({ metrics, sport, aiReport, anthropometrics, aiVision, repDuration }: Props) {
   const flagged = metrics.filter((m) => m.flagged);
   const passed = metrics.filter((m) => !m.flagged);
+
+  // Compute tempo evaluation if repDuration is provided
+  let tempoStatus = "Ideal Concentric Tempo";
+  let tempoIsIdeal = true;
+  let tempoNote = "Optimal velocity window balancing time-under-tension and mechanical drive over mid-foot.";
+  let minTempo = 1.2;
+  let maxTempo = 3.5;
+
+  if (repDuration) {
+    if (sport === "deadlift") {
+      minTempo = 1.2;
+      maxTempo = 3.5;
+      if (repDuration < 1.2) {
+        tempoStatus = "Explosive Power Pull";
+        tempoIsIdeal = true;
+        tempoNote = "Rapid concentric velocity off floor (< 1.2s). High rate of force development.";
+      } else if (repDuration > 3.5) {
+        tempoStatus = "High Tension Grind Pull";
+        tempoIsIdeal = false;
+        tempoNote = "Extended concentric duration (> 3.5s). Indicates near-maximal load or sticking point fatigue.";
+      } else {
+        tempoStatus = "Ideal Concentric Tempo";
+        tempoIsIdeal = true;
+        tempoNote = "Optimal velocity window (1.2s – 3.5s) balancing mechanical drive over mid-foot.";
+      }
+    } else {
+      minTempo = 0.3;
+      maxTempo = 0.8;
+      if (repDuration < 0.3) {
+        tempoStatus = "Ultra-Fast Delivery Stride";
+        tempoIsIdeal = true;
+        tempoNote = "Rapid kinetic momentum transfer into ball release.";
+      } else if (repDuration > 0.8) {
+        tempoStatus = "Delayed Delivery Stride";
+        tempoIsIdeal = false;
+        tempoNote = "Slower arm acceleration relative to front-leg plant.";
+      } else {
+        tempoStatus = "Ideal Delivery Stride Tempo";
+        tempoIsIdeal = true;
+        tempoNote = "Optimal delivery stride timing (0.3s – 0.8s) from arm horizontal to ball release.";
+      }
+    }
+  }
 
   return (
     <div className="animate-slide-up space-y-6">
@@ -69,6 +113,49 @@ export default function ResultsPanel({ metrics, sport, aiReport, anthropometrics
           <p className="text-xs text-red-300 mt-1 uppercase tracking-wider font-mono">Flagged</p>
         </div>
       </div>
+
+      {/* Rep Timing & Kinetic Tempo Card */}
+      {repDuration && (
+        <div className="glass-card p-5 border-white/15 bg-neutral-950 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-2">
+              <span>⚡</span> Rep Duration & Movement Tempo
+            </h4>
+            <span
+              className={`text-[10px] px-3 py-0.5 rounded-full font-bold font-mono border uppercase tracking-wider ${
+                tempoIsIdeal
+                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                  : "bg-amber-500/20 text-amber-300 border-amber-500/30"
+              }`}
+            >
+              {tempoStatus}
+            </span>
+          </div>
+
+          <div className="flex items-baseline gap-3">
+            <span className="text-4xl font-black text-white font-mono">{repDuration}</span>
+            <span className="text-sm font-semibold text-gray-400 font-mono">seconds</span>
+            <span className="text-xs text-gray-400 font-mono ml-auto">
+              Ideal Window: <strong className="text-gray-200">{minTempo}s – {maxTempo}s</strong>
+            </span>
+          </div>
+
+          {/* Range Visual Progress Bar */}
+          <div className="relative w-full h-2.5 bg-neutral-800 rounded-full overflow-hidden border border-white/10">
+            <div
+              className={`absolute top-0 bottom-0 rounded-full ${tempoIsIdeal ? "bg-emerald-500" : "bg-amber-500"}`}
+              style={{
+                left: `${Math.max(0, Math.min(90, (minTempo / (maxTempo * 1.3)) * 100))}%`,
+                width: `${Math.min(100, ((maxTempo - minTempo) / (maxTempo * 1.3)) * 100)}%`,
+              }}
+            />
+          </div>
+
+          <p className="text-xs text-gray-300 leading-relaxed font-medium">
+            {tempoNote}
+          </p>
+        </div>
+      )}
 
       {/* Metric details cards */}
       <div className="space-y-5">
