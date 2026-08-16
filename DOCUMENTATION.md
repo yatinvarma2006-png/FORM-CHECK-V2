@@ -5,13 +5,13 @@
 
 ## 1. Executive Summary & Overview
 
-**FormCheck** is a high-precision computer vision and artificial intelligence platform engineered for real-time sports biomechanics, movement form evaluation, and injury prevention.
+**FormCheck** is a high-precision computer vision and artificial intelligence platform engineered for real-time sports biomechanics, movement form evaluation, rep duration kinetic tempo analysis, and injury prevention.
 
 The system specializes in two primary athletic discipline movement patterns:
-1. **Conventional Deadlift**: Posterior chain biomechanics, hip hinge timing, spinal neutrality, hip-shoulder rise synchronization, and terminal extension lockouts.
-2. **Cricket Fast Bowling**: Delivery stride, front leg bracing angle, shoulder-hip separation, and arm extension legality under ICC regulations.
+1. **Conventional Deadlift**: Posterior chain biomechanics, hip hinge timing, spinal neutrality, hip-shoulder rise synchronization, rep duration & concentric kinetic tempo, and terminal extension lockouts.
+2. **Cricket Fast Bowling**: Delivery stride, front leg bracing angle, shoulder-hip separation, delivery stride duration, and arm extension legality under ICC regulations.
 
-FormCheck combines **33-point BlazePose kinematic landmark tracking**, **100% mathematically locked SVG skeleton overlays**, **rule-based anatomical physics**, **universal human somatotype v2.0 adaptive thresholding**, **one-click executive PDF report export**, and **multimodal Google Gemini 3.5/3.6 Flash AI vision & chat**.
+FormCheck combines **33-point BlazePose kinematic landmark tracking**, **100% mathematically locked SVG skeleton overlays**, **rule-based anatomical physics**, **universal human somatotype v2.0 adaptive thresholding**, **rep timing & concentric tempo profiling**, **one-click executive PDF report export**, and **multimodal Google Gemini 3.5/3.6 Flash AI vision & chat**.
 
 ---
 
@@ -140,6 +140,16 @@ To guarantee zero skeleton drift regardless of screen resolution or aspect ratio
 
 ---
 
+### **F. Rep Duration & Concentric Kinetic Tempo Physics**
+FormCheck calculates the elapsed time between initial pull initiation ($t_{\text{setup}}$) and full standing lockout ($t_{\text{lockout}}$):
+$$\Delta t = t_{\text{lockout}} - t_{\text{setup}}$$
+
+- **Explosive Power Pull** ($\Delta t < 1.2\text{s}$): Rapid concentric velocity off the floor; high rate of force development (RFD).
+- **Ideal Concentric Tempo** ($1.2\text{s} \le \Delta t \le 3.5\text{s}$): Optimal kinetic window balancing mechanical drive, time under tension, and bar path over mid-foot.
+- **High Tension Grind Pull** ($\Delta t > 3.5\text{s}$): Extended concentric duration; indicates near-maximal load (1RM) or sticking point fatigue.
+
+---
+
 ## 4. API Endpoint Reference
 
 ### **`POST /api/video/upload`**
@@ -161,6 +171,7 @@ Conversational AI coach powered by Google Gemini 3.5/3.6 Flash. Supports chat hi
 
 ## 5. Verification & Quality Assurance
 
-- **Zero Lint / Code Errors**: All TypeScript components compile cleanly with Vite HMR. Backend runs cleanly on FastAPI + Python 3.11.
+- **Zero Lint / Code Errors**: All TypeScript components compile cleanly with Vite HMR (`tsc && vite build`). Backend runs cleanly on FastAPI + Python 3.11.
 - **MediaPipe Pose Accuracy**: Verified 33-point tracking at 30+ FPS.
+- **Rep Timing & Kinetic Tempo**: Real-time concentric duration extraction & classification.
 - **PDF Report Generation**: Verified `@media print` layout producing white-paper executive certificate exports.
