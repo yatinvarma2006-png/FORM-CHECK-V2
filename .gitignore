@@ -15,7 +15,8 @@ backend/__pycache__/
 *.db
 backend/*.db
 backend/formcheck.db
-backend/uploads/
+backend/uploads/*
+!backend/uploads/.gitkeep
 backend/models_cache/
 
 # Production build output
@@ -26,4 +27,7 @@ frontend/dist/
 *.log
 .DS_Store
 .env
+.env.*
 .env.local
+.env.*.local
+!.env.example

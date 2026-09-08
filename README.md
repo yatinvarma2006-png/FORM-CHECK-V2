@@ -39,7 +39,20 @@ To enable the AI Biomechanics Coach chatbot and Multimodal Vision Inspection:
 
 ## ⚡ Quick Start & Installation
 
-### 1. Backend Setup (FastAPI & MediaPipe)
+### **Option A: One-Command Start (Root Directory)**
+From the main project root directory:
+```bash
+npm run dev
+```
+This automatically boots both:
+- 🚀 **FastAPI Backend API**: `http://localhost:8000` (docs at `/docs`)
+- ⚡ **Vite React Frontend**: `http://localhost:5173`
+
+---
+
+### **Option B: Manual / Separate Server Startup**
+
+#### 1. Backend Setup (FastAPI & MediaPipe)
 ```bash
 cd backend
 python3 -m venv venv
@@ -50,7 +63,7 @@ pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 2. Frontend Setup (React + Vite + Nike Design System)
+#### 2. Frontend Setup (React + Vite + Nike Design System)
 ```bash
 cd frontend
 npm install
@@ -60,3 +73,4 @@ npm run dev
 ### 3. Open Application
 - Web UI: **[http://localhost:5173](http://localhost:5173)**
 - Backend API Documentation: **[http://localhost:8000/docs](http://localhost:8000/docs)**
+
