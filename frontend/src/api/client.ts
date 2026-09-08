@@ -27,16 +27,25 @@ async function request<T>(
   }
 
   let res: Response;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
   try {
     res = await fetch(`${BASE_URL}${path}`, {
       ...options,
       headers,
+      signal: options.signal || controller.signal,
     });
   } catch (err: any) {
+    if (err.name === "AbortError") {
+      throw new Error(`Connection timed out after 30s trying to reach backend at ${BASE_URL}. Ensure your backend server is deployed and responding.`);
+    }
     if (window.location.protocol === "https:" && BASE_URL.startsWith("http://localhost")) {
       throw new Error("Mixed Content Block: Browsers block HTTPS sites from connecting to insecure HTTP localhost. Please deploy your backend to an HTTPS host (e.g. Render/Railway) and set VITE_API_URL on Vercel, or open FormCheck locally at http://localhost:5173.");
     }
     throw new Error(`Failed to connect to backend at ${BASE_URL}. Ensure your backend server is running: ${err.message || err}`);
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!res.ok) {
