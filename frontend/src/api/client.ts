@@ -26,14 +26,22 @@ async function request<T>(
     headers["Content-Type"] = "application/json";
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch (err: any) {
+    if (window.location.protocol === "https:" && BASE_URL.startsWith("http://localhost")) {
+      throw new Error("Mixed Content Block: Browsers block HTTPS sites from connecting to insecure HTTP localhost. Please deploy your backend to an HTTPS host (e.g. Render/Railway) and set VITE_API_URL on Vercel, or open FormCheck locally at http://localhost:5173.");
+    }
+    throw new Error(`Failed to connect to backend at ${BASE_URL}. Ensure your backend server is running: ${err.message || err}`);
+  }
 
   if (!res.ok) {
     const detail = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(detail.detail || `HTTP ${res.status}`);
+    throw new Error(detail.detail || `Server error (HTTP ${res.status})`);
   }
 
   return res.json();
