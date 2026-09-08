@@ -1,7 +1,11 @@
 /* API client for FormCheck backend. */
 import type { Landmark, MetricResult, AICoachingReport, Anthropometrics, AIVisionAnalysis } from "../types";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD
+    ? "https://function-calendars-treasurer-algorithm.trycloudflare.com/api"
+    : "http://localhost:8000/api");
 
 
 function getSessionId(): string {
